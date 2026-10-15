@@ -867,14 +867,12 @@ fn rustflags_from_target(
     };
 
     let target_config = gctx.target_cfg_tuple(target)?;
+
     if let Some(args) = match flag {
         Flags::Rust => target_config.rustflags,
         Flags::Rustdoc => target_config.rustdocflags,
-    }
-    .as_ref()
-    .map(|flags| &flags.val)
-    {
-        rustflags.extend(args.as_slice().iter().cloned());
+    } {
+        rustflags.extend(args.val.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
