@@ -264,6 +264,8 @@ pub struct GlobalContext {
     credential_cache: Mutex<HashMap<CanonicalUrl, CredentialCacheValue>>,
     /// Cache of registry config from the `[registries]` table.
     registry_config: Mutex<HashMap<SourceId, Option<RegistryConfig>>>,
+    /// Cache of targets from the `[target]` table.
+    target_configs: Mutex<HashMap<String, TargetConfig>>,
     /// Locks on the package and index caches.
     package_cache_lock: CacheLocker,
     /// Cached configuration parsed by Cargo
@@ -395,6 +397,7 @@ impl GlobalContext {
             updated_sources: Default::default(),
             credential_cache: Default::default(),
             registry_config: Default::default(),
+            target_configs: Default::default(),
             package_cache_lock: CacheLocker::new(),
             http_config: Default::default(),
             http_async: Default::default(),
@@ -2042,7 +2045,13 @@ impl GlobalContext {
 
     /// Returns the `[target]` table definition for the given target tuple.
     pub fn target_cfg_tuple(&self, target: &str) -> CargoResult<TargetConfig> {
-        target::load_target_tuple(self, target)
+        let mut cache = self.target_configs.lock().unwrap();
+        if let Some(target_config) = cache.get(target) {
+            return Ok(target_config.clone());
+        }
+        let target_config = target::load_target_tuple(self, target)?;
+        cache.insert(target.to_owned(), target_config.clone());
+        Ok(target_config)
     }
 
     /// Returns the cached [`SourceId`] corresponding to the main repository.

@@ -2713,6 +2713,32 @@ linker = "foo"
 }
 
 #[cargo_test]
+fn unquoted_dotted_key_table_known_tuple_multiple_calls() {
+    write_config_toml(
+        r#"
+[target.thumbv8m.main-none-eabihf]
+linker = "foo"
+"#,
+    );
+
+    let gctx = new_gctx();
+
+    let _ = gctx.target_cfg_tuple("thumbv8m.main-none-eabihf").unwrap();
+    let cfg = gctx.target_cfg_tuple("thumbv8m.main-none-eabihf").unwrap();
+    assert!(cfg.linker.is_some(), "{cfg:?}");
+
+    let output = read_output(gctx);
+    let expected = str![[r#"
+[WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
+  |
+  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+
+"#]];
+    assert_e2e().eq(&output, expected);
+}
+
+#[cargo_test]
 fn dotted_key_env() {
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_TARGET_SOME_DOTTED_TUPLE_LINKER", "foo")
