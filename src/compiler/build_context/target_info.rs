@@ -12,7 +12,7 @@ use crate::compiler::CompileMode;
 use crate::compiler::CompileTarget;
 use crate::compiler::CrateType;
 use crate::compiler::apply_env_config;
-use crate::context::{GlobalContext, StringList, TargetConfig};
+use crate::context::{GlobalContext, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use crate::workspace::{Dependency, Package, Target, TargetKind, Workspace};
@@ -761,13 +761,6 @@ enum Flags {
 }
 
 impl Flags {
-    fn as_key(self) -> &'static str {
-        match self {
-            Flags::Rust => "rustflags",
-            Flags::Rustdoc => "rustdocflags",
-        }
-    }
-
     fn as_env(self) -> &'static str {
         match self {
             Flags::Rust => "RUSTFLAGS",
@@ -872,7 +865,12 @@ fn rustflags_from_target(
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    if let Some(args) = gctx.get::<Option<StringList>>(["target", target, flag.as_key()])? {
+
+    let target_config = gctx.target_cfg_tuple(target)?;
+    if let Some(args) = match flag {
+        Flags::Rust => target_config.rustflags,
+        Flags::Rustdoc => target_config.rustdocflags,
+    }.as_ref().map(|flags| &flags.val) {
         rustflags.extend(args.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags
